@@ -28,22 +28,89 @@ def set_webhook():
 TOKEN = os.environ.get('TELEGRAM_TOKEN', '7852458153:AAE8DhR9kI1K7ZVEGyX7gdMdoHwFx_tfEPQ')
 RENDER_URL = os.environ.get('RENDER_URL', 'https://telegram-movie-bots.onrender')
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    user_name = update.message.from_user.first_name
+
+
+    # Create bubble notification
+    keyboard = [
+        [
+            InlineKeyboardButton("🔄 Restart Bot", callback_data="restart_bot")
+        ]
+    ]
+    bubble_markup = InlineKeyboardMarkup(keyboard)
+
+    try:
+        bubble_msg = await context.bot.send_message(
+            chat_id=chat_id,
+            text="🤖 *Movie Bot Active*\nClick below to restart the bot",
+            reply_markup=bubble_markup,
+            parse_mode=ParseMode.MARKDOWN
+        )
+
+        # Try to pin the bubble message
+        try:
+            await context.bot.pin_chat_message(
+                chat_id=chat_id,
+                message_id=bubble_msg.message_id,
+                disable_notification=True
+            )
+        except Exception as e:
+            logging.warning(f"Could not pin bubble message: {e}")
+
+    except Exception as e:
+        logging.error(f"Failed to create bubble: {e}")
+
+    # Send welcome message
+    welcome_keyboard = [
+        [
+            InlineKeyboardButton("🎬 Download Movies", callback_data="search_movies"),
+            InlineKeyboardButton("👨‍🦱 Search by Actor", callback_data="search_actor")
+        ],
+        [InlineKeyboardButton("🎲 Random Movies", callback_data="random_movies"),
+         InlineKeyboardButton("📈 Popular Movies", callback_data='popular'),]
+    ]
+    welcome_markup = InlineKeyboardMarkup(welcome_keyboard)
+
+    welcome_msg = (
+        f"Welcome @{user_name}!\n\n"
+        "⚠️ *Note: Messages will auto-delete after 5 minutes to avoid copyright* 🖋️\n\n"
+        "Choose an option below:"
+    )
+
+    try:
+        message = await context.bot.send_message(
+            chat_id=chat_id,
+            text=welcome_msg,
+            reply_markup=welcome_markup,
+            parse_mode=ParseMode.MARKDOWN
+        )
+        # Schedule deletion
+        asyncio.create_task(delete_message_later(context, chat_id, message.message_id))
+    except Exception as e:
+        logging.error(f"Failed to send welcome message: {e}")
+
+async def send_with_warning(message, context: ContextTypes.DEFAULT_TYPE, text: str, reply_markup=None, parse_mode=None):
+    try:
+        if hasattr(message, 'reply_text'):
+            sent_message = await message.reply_text(
+                f"{text}\n\n{DISCLAIMER}",
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+        else:
+            sent_message = await message.edit_text(
+                f"{text}\n\n{DISCLAIMER}",
+                reply_markup=reply_markup,
+                parse_mode=parse_mode
+            )
+
 # Create the Flask app
 app = Flask(__name__)
 
 # Initialize the bot and the application
 bot = Bot(TOKEN)
-application = Application.builder().token(TOKEN).build()
-
-application.add_handler(CommandHandler("start", start))
-application.add_handler(CommandHandler("stop", stop_command))
-application.add_handler(CallbackQueryHandler(restart_bot_callback, pattern="^restart_bot$"))
-application.add_handler(CallbackQueryHandler(handle_button_callback, pattern="^(search_movies|search_actor)$"))
-application.add_handler(CallbackQueryHandler(random_movies_callback, pattern="^random_movies$"))
-application.add_handler(CallbackQueryHandler(popular_movies_callback, pattern="^popular$"))
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_query))
-application.add_handler(CallbackQueryHandler(actor_callback, pattern="^actor_"))
-application.add_handler(CallbackQueryHandler(movie_callback, pattern="^movie_"))
 
 # Command handler
 async def start(update: Update, context):
@@ -284,83 +351,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    user_name = update.message.from_user.first_name
 
-
-    # Create bubble notification
-    keyboard = [
-        [
-            InlineKeyboardButton("🔄 Restart Bot", callback_data="restart_bot")
-        ]
-    ]
-    bubble_markup = InlineKeyboardMarkup(keyboard)
-
-    try:
-        bubble_msg = await context.bot.send_message(
-            chat_id=chat_id,
-            text="🤖 *Movie Bot Active*\nClick below to restart the bot",
-            reply_markup=bubble_markup,
-            parse_mode=ParseMode.MARKDOWN
-        )
-
-        # Try to pin the bubble message
-        try:
-            await context.bot.pin_chat_message(
-                chat_id=chat_id,
-                message_id=bubble_msg.message_id,
-                disable_notification=True
-            )
-        except Exception as e:
-            logging.warning(f"Could not pin bubble message: {e}")
-
-    except Exception as e:
-        logging.error(f"Failed to create bubble: {e}")
-
-    # Send welcome message
-    welcome_keyboard = [
-        [
-            InlineKeyboardButton("🎬 Download Movies", callback_data="search_movies"),
-            InlineKeyboardButton("👨‍🦱 Search by Actor", callback_data="search_actor")
-        ],
-        [InlineKeyboardButton("🎲 Random Movies", callback_data="random_movies"),
-         InlineKeyboardButton("📈 Popular Movies", callback_data='popular'),]
-    ]
-    welcome_markup = InlineKeyboardMarkup(welcome_keyboard)
-
-    welcome_msg = (
-        f"Welcome @{user_name}!\n\n"
-        "⚠️ *Note: Messages will auto-delete after 5 minutes to avoid copyright* 🖋️\n\n"
-        "Choose an option below:"
-    )
-
-    try:
-        message = await context.bot.send_message(
-            chat_id=chat_id,
-            text=welcome_msg,
-            reply_markup=welcome_markup,
-            parse_mode=ParseMode.MARKDOWN
-        )
-        # Schedule deletion
-        asyncio.create_task(delete_message_later(context, chat_id, message.message_id))
-    except Exception as e:
-        logging.error(f"Failed to send welcome message: {e}")
-
-async def send_with_warning(message, context: ContextTypes.DEFAULT_TYPE, text: str, reply_markup=None, parse_mode=None):
-    try:
-        if hasattr(message, 'reply_text'):
-            sent_message = await message.reply_text(
-                f"{text}\n\n{DISCLAIMER}",
-                reply_markup=reply_markup,
-                parse_mode=parse_mode
-            )
-        else:
-            sent_message = await message.edit_text(
-                f"{text}\n\n{DISCLAIMER}",
-                reply_markup=reply_markup,
-                parse_mode=parse_mode
-            )
 
         await delete_message_later(context, sent_message.chat_id, sent_message.message_id)
         return sent_message
