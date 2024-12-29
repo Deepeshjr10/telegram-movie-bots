@@ -2,13 +2,5 @@ python-telegram-bot==20.3  # For telegram.ext and related components
 certifi                    # For SSL certificate validation
 requests                   # For HTTP requests
 httpx                      # For additional HTTP client needs
-logging                    # No need to include; built into Python
-re                         # No need to include; built into Python
-datetime                   # No need to include; built into Python
-collections                # No need to include; built into Python
-asyncio                    # No need to include; built into Python
-os                         # No need to include; built into Python
-socket                     # No need to include; built into Python
-random                     # No need to include; built into Python
-ssl                        # No need to include; built into Python
 db_helper                  # This is your custom module; ensure it's deployed with your project
+flask
