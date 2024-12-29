@@ -15,6 +15,36 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 import httpx
 import random
+from flask import Flask, request
+from telegram import Update, Bot
+from telegram.ext import Application, CommandHandler
+
+TOKEN = "7852458153:AAE8DhR9kI1K7ZVEGyX7gdMdoHwFx_tfEPQ"
+
+# Create the Flask app
+app = Flask(__name__)
+
+# Initialize the bot and the application
+bot = Bot(TOKEN)
+application = Application.builder().token(TOKEN).build()
+
+# Command handler
+async def start(update: Update, context):
+    await update.message.reply_text("Hello! Welcome to the bot.")
+
+application.add_handler(CommandHandler("start", start))
+
+# Define the webhook route
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    data = request.get_json()
+    update = Update.de_json(data, bot)
+    application.update_queue.put_nowait(update)
+    return "OK"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
 
 db = DatabaseHelper()
 
