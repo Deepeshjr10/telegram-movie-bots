@@ -25,7 +25,7 @@ def set_webhook():
     webhook_url = f"{RENDER_URL}/webhook/{TOKEN}"
     application.bot.set_webhook(webhook_url)
 
-TOKEN = "7852458153:AAE8DhR9kI1K7ZVEGyX7gdMdoHwFx_tfEPQ"
+TOKEN = os.environ.get('7852458153:AAE8DhR9kI1K7ZVEGyX7gdMdoHwFx_tfEPQ')  # Instead of hardcoding it
 
 # Create the Flask app
 app = Flask(__name__)
