@@ -18,6 +18,12 @@ import random
 from flask import Flask, request
 from telegram import Update, Bot
 from telegram.ext import Application, CommandHandler
+from telegram.ext import Updater
+
+def set_webhook():
+    RENDER_URL = os.environ.get('https://telegram-movie-bots-8.onrender.com')  # Get your Render URL from environment variable
+    webhook_url = f"{RENDER_URL}/webhook/{TOKEN}"
+    application.bot.set_webhook(webhook_url)
 
 TOKEN = "7852458153:AAE8DhR9kI1K7ZVEGyX7gdMdoHwFx_tfEPQ"
 
@@ -35,7 +41,7 @@ async def start(update: Update, context):
 application.add_handler(CommandHandler("start", start))
 
 # Define the webhook route
-@app.route(f"/{TOKEN}", methods=["POST"])
+@app.route(f"/webhook/{TOKEN}", methods=["POST"])
 def webhook():
     data = request.get_json()
     update = Update.de_json(data, bot)
@@ -43,7 +49,8 @@ def webhook():
     return "OK"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
 
 
 db = DatabaseHelper()
