@@ -25,7 +25,8 @@ def set_webhook():
     webhook_url = f"{RENDER_URL}/webhook/{TOKEN}"
     application.bot.set_webhook(webhook_url)
 
-TOKEN = 7852458153:AAE8DhR9kI1K7ZVEGyX7gdMdoHwFx_tfEPQ
+TOKEN = os.environ.get('TELEGRAM_TOKEN', '7852458153:AAE8DhR9kI1K7ZVEGyX7gdMdoHwFx_tfEPQ')
+RENDER_URL = os.environ.get('RENDER_URL', 'https://telegram-movie-bots.onrender')
 
 # Create the Flask app
 app = Flask(__name__)
@@ -33,6 +34,16 @@ app = Flask(__name__)
 # Initialize the bot and the application
 bot = Bot(TOKEN)
 application = Application.builder().token(TOKEN).build()
+
+application.add_handler(CommandHandler("start", start))
+application.add_handler(CommandHandler("stop", stop_command))
+application.add_handler(CallbackQueryHandler(restart_bot_callback, pattern="^restart_bot$"))
+application.add_handler(CallbackQueryHandler(handle_button_callback, pattern="^(search_movies|search_actor)$"))
+application.add_handler(CallbackQueryHandler(random_movies_callback, pattern="^random_movies$"))
+application.add_handler(CallbackQueryHandler(popular_movies_callback, pattern="^popular$"))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_query))
+application.add_handler(CallbackQueryHandler(actor_callback, pattern="^actor_"))
+application.add_handler(CallbackQueryHandler(movie_callback, pattern="^movie_"))
 
 # Command handler
 async def start(update: Update, context):
@@ -42,11 +53,29 @@ application.add_handler(CommandHandler("start", start))
 
 # Define the webhook route
 @app.route(f"/webhook/{TOKEN}", methods=["POST"])
-def webhook():
-    data = request.get_json()
-    update = Update.de_json(data, bot)
-    application.update_queue.put_nowait(update)
-    return "OK"
+async def webhook():
+    """Handle incoming webhook updates"""
+    if request.method == "POST":
+        update = Update.de_json(request.get_json(), bot)
+        await application.process_update(update)
+        return "OK"
+    return "ERROR"
+
+# Health check route
+@app.route('/')
+def home():
+    return 'Bot is running!'
+
+# Set webhook URL
+@app.before_first_request
+def set_webhook():
+    webhook_url = f"{RENDER_URL}/webhook/{TOKEN}"
+    try:
+        bot.delete_webhook()
+        bot.set_webhook(webhook_url)
+        print(f"Webhook set to {webhook_url}")
+    except Exception as e:
+        print(f"Error setting webhook: {e}")
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
