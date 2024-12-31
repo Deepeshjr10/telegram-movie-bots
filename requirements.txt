@@ -5,8 +5,6 @@ requests
 asyncio
 python-dotenv
 flask
-sqlite3
-tkinter
 logging
 datetime
 threading
